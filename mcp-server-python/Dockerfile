@@ -14,4 +14,4 @@ ENV PORT=8080
 
 # Run with uvicorn
 # Assuming 'mcp' in server.py is the ASGI app or compatible
-CMD ["sh", "-c", "uvicorn server:mcp --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port ${PORT}"]
