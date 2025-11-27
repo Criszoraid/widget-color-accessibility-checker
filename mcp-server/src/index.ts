@@ -1,318 +1,258 @@
-#!/usr/bin/env node
-
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import {
-    CallToolRequestSchema,
-    ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-import express from "express";
+// src/index.ts
+import express, { Request, Response } from "express";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import * as z from "zod";
 import cors from "cors";
 
-// Simulated accessibility analysis function
-function analyzeAccessibility(url: string): {
-    passed: boolean;
-    message: string;
-    score: string;
-    errors: number;
-} {
-    // Simulate random analysis
-    const passed = Math.random() > 0.3;
+// URL de tu widget en Render
+const WIDGET_URL = "https://widget-color-accessibility-checker.onrender.com";
+
+// --- LÓGICA DE NEGOCIO (Simulada) ---
+
+function analyzeContrast(foreground: string, background: string) {
+    // Simulación
+    const ratioEjemplo = 4.5;
+    const passesAA = ratioEjemplo >= 4.5;
+    const passesAAA = ratioEjemplo >= 7;
+
     return {
-        passed,
-        message: passed
-            ? `✅ ¡Éxito! El contraste de color general de ${url} cumple con las pautas WCAG AA.`
-            : `⚠️ Se encontraron problemas de contraste en ${url}. Consulta el informe detallado para las correcciones.`,
-        score: passed ? "9.5/10" : "6.8/10",
-        errors: passed ? 0 : 7,
+        contrastRatio: ratioEjemplo,
+        passesAA,
+        passesAAA,
+        message: `Contraste simulado para ${foreground} y ${background}: ${ratioEjemplo}:1`,
+        widgetUrl: WIDGET_URL,
     };
 }
 
-// Analyze HTML content directly
-function analyzeHTMLContent(html: string): {
-    passed: boolean;
-    message: string;
-    score: string;
-    errors: number;
-    elementsAnalyzed: number;
-} {
-    // Simple heuristic: count color-related CSS and style attributes
-    const colorPatterns = html.match(/(color|background|rgb|rgba|#[0-9a-fA-F]{3,6})/gi) || [];
-    const elementsAnalyzed = colorPatterns.length;
-
-    // Simulate analysis based on content
-    const passed = Math.random() > 0.4;
+function analyzeHtml(html: string) {
+    // Simulación
     return {
-        passed,
-        message: passed
-            ? `✅ ¡Éxito! El contenido HTML analizado cumple con las pautas WCAG AA.`
-            : `⚠️ Se encontraron problemas de contraste en el HTML. Consulta el informe detallado.`,
-        score: passed ? "8.7/10" : "5.9/10",
-        errors: passed ? 0 : Math.floor(elementsAnalyzed * 0.15),
-        elementsAnalyzed,
-    };
-}
-
-// WCAG information
-function getWCAGInfo(level: "AA" | "AAA"): string {
-    const info = {
-        AA: `WCAG 2.1 Nivel AA (Mínimo recomendado):
-- Contraste de texto normal: 4.5:1
-- Contraste de texto grande: 3:1
-- Contraste de componentes UI: 3:1
-- Este nivel es el estándar legal en muchos países`,
-        AAA: `WCAG 2.1 Nivel AAA (Mejorado):
-- Contraste de texto normal: 7:1
-- Contraste de texto grande: 4.5:1
-- Contraste de componentes UI: 3:1
-- Este nivel proporciona la máxima accesibilidad`,
-    };
-    return info[level];
-}
-
-// Create Express app
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Enable CORS
-app.use(cors());
-app.use(express.json());
-
-// Root endpoint
-app.get("/", (req, res) => {
-    res.json({
-        name: "Color Accessibility MCP Server",
-        version: "1.0.0",
-        endpoints: {
-            health: "/health",
-            sse: "/sse",
-            message: "/message"
-        },
-        tools: ["analyze_accessibility", "analyze_html_content", "get_wcag_info"]
-    });
-});
-
-// Health check endpoint
-app.get("/health", (req, res) => {
-    res.json({ status: "ok", service: "color-accessibility-mcp-server" });
-});
-
-// Create MCP server instance
-const server = new Server(
-    {
-        name: "color-accessibility-checker",
-        version: "1.0.0",
-    },
-    {
-        capabilities: {
-            tools: {},
-        },
-    }
-);
-
-// List available tools
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-        tools: [
+        issues: [
             {
-                name: "analyze_accessibility",
-                description:
-                    "Analiza la accesibilidad de color de una URL. Simula un análisis de contraste WCAG y devuelve una puntuación, número de errores y mensaje.",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        url: {
-                            type: "string",
-                            description: "URL del sitio web a analizar (ej: https://ejemplo.com)",
-                        },
-                    },
-                    required: ["url"],
-                },
-            },
-            {
-                name: "analyze_html_content",
-                description:
-                    "Analiza la accesibilidad de color de contenido HTML pegado directamente. Útil cuando tienes el código HTML de una página y quieres verificar su accesibilidad sin necesidad de una URL.",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        html: {
-                            type: "string",
-                            description: "Contenido HTML a analizar (puede ser un fragmento o página completa)",
-                        },
-                    },
-                    required: ["html"],
-                },
-            },
-            {
-                name: "get_wcag_info",
-                description:
-                    "Obtiene información sobre las pautas WCAG de accesibilidad de color para un nivel específico (AA o AAA).",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        level: {
-                            type: "string",
-                            enum: ["AA", "AAA"],
-                            description: "Nivel WCAG (AA o AAA)",
-                        },
-                    },
-                    required: ["level"],
-                },
+                description: "Ejemplo: posible contraste bajo en un elemento <p> con clase .text-muted",
+                element: "p.text-muted",
             },
         ],
     };
+}
+
+function getWcagInfo() {
+    return {
+        info: "WCAG 2.1: AA requiere contraste mínimo 4.5:1 para texto normal (3:1 si es grande). AAA requiere 7:1 para texto normal.",
+    };
+}
+
+// --- CONFIGURACIÓN MCP ---
+
+const mcpServer = new McpServer({
+    name: "color-accessibility-mcp",
+    version: "1.0.0",
 });
 
-// Handle tool calls
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-
-    try {
-        if (!args) {
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: "❌ Error: No se proporcionaron argumentos",
-                    },
-                ],
-            };
-        }
-
-        if (name === "analyze_accessibility") {
-            const url = args.url as string;
-
-            if (!url || !url.startsWith("http")) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: "❌ Error: Por favor proporciona una URL válida que empiece con http:// o https://",
-                        },
-                    ],
-                };
-            }
-
-            const result = analyzeAccessibility(url);
-
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: `# Análisis de Accesibilidad: ${url}
-
-${result.message}
-
-**Puntuación**: ${result.score}
-**Errores encontrados**: ${result.errors}
-**Estado**: ${result.passed ? "✅ APROBADO" : "❌ REQUIERE CORRECCIONES"}
-
-${result.passed ? "" : "Recomendación: Revisa los elementos con bajo contraste y ajusta los colores para cumplir con WCAG AA."}`,
-                    },
-                ],
-            };
-        } else if (name === "analyze_html_content") {
-            const html = args.html as string;
-
-            if (!html || html.trim().length === 0) {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: "❌ Error: Por favor proporciona contenido HTML válido",
-                        },
-                    ],
-                };
-            }
-
-            const result = analyzeHTMLContent(html);
-
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: `# Análisis de Contenido HTML
-
-${result.message}
-
-**Puntuación**: ${result.score}
-**Elementos analizados**: ${result.elementsAnalyzed}
-**Errores encontrados**: ${result.errors}
-**Estado**: ${result.passed ? "✅ APROBADO" : "❌ REQUIERE CORRECCIONES"}
-
-${result.passed ? "" : "Recomendación: Revisa los elementos con bajo contraste y ajusta los colores para cumplir con WCAG AA."}`,
-                    },
-                ],
-            };
-        } else if (name === "get_wcag_info") {
-            const level = args.level as "AA" | "AAA";
-
-            if (level !== "AA" && level !== "AAA") {
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: "❌ Error: El nivel debe ser 'AA' o 'AAA'",
-                        },
-                    ],
-                };
-            }
-
-            const info = getWCAGInfo(level);
-
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: `# ${info}`,
-                    },
-                ],
-            };
-        } else {
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: `❌ Error: Herramienta desconocida: ${name}`,
-                    },
-                ],
-            };
-        }
-    } catch (error) {
+mcpServer.registerTool(
+    "analyze_accessibility",
+    {
+        title: "Analizar contraste de color",
+        description: "Analiza la accesibilidad (contraste) entre un color de texto y fondo.",
+        inputSchema: {
+            foreground: z.string().describe("Color de texto hex"),
+            background: z.string().describe("Color de fondo hex"),
+        },
+        outputSchema: {
+            contrastRatio: z.number(),
+            passesAA: z.boolean(),
+            passesAAA: z.boolean(),
+            message: z.string(),
+            widgetUrl: z.string(),
+        },
+    },
+    async ({ foreground, background }) => {
+        const output = analyzeContrast(foreground, background);
         return {
-            content: [
-                {
-                    type: "text",
-                    text: `❌ Error: ${error instanceof Error ? error.message : String(error)}`,
-                },
-            ],
+            structuredContent: output,
+            content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
         };
+    }
+);
+
+mcpServer.registerTool(
+    "analyze_html_content",
+    {
+        title: "Analizar HTML",
+        description: "Analiza un fragmento HTML para problemas de contraste.",
+        inputSchema: { html: z.string() },
+        outputSchema: {
+            issues: z.array(z.object({ description: z.string(), element: z.string().optional() })),
+        },
+    },
+    async ({ html }) => {
+        const output = analyzeHtml(html);
+        return {
+            structuredContent: output,
+            content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
+        };
+    }
+);
+
+mcpServer.registerTool(
+    "get_wcag_info",
+    {
+        title: "Info WCAG",
+        description: "Información sobre requisitos WCAG.",
+        inputSchema: {},
+        outputSchema: { info: z.string() },
+    },
+    async () => {
+        const output = getWcagInfo();
+        return {
+            structuredContent: output,
+            content: [{ type: "text", text: output.info }],
+        };
+    }
+);
+
+// --- SERVIDOR EXPRESS (REST + MCP) ---
+
+const app = express();
+app.use(express.json());
+app.use(cors()); // Importante para GPT Actions
+
+// 1. Endpoints REST para GPT Actions
+app.post("/api/analyze", (req, res) => {
+    const { foreground, background } = req.body;
+    if (!foreground || !background) {
+        return res.status(400).json({ error: "Missing foreground or background" });
+    }
+    res.json(analyzeContrast(foreground, background));
+});
+
+app.post("/api/analyze-html", (req, res) => {
+    const { html } = req.body;
+    if (!html) return res.status(400).json({ error: "Missing html" });
+    res.json(analyzeHtml(html));
+});
+
+app.get("/api/wcag-info", (req, res) => {
+    res.json(getWcagInfo());
+});
+
+// 2. Endpoint OpenAPI para configuración automática
+app.get("/openapi.json", (req, res) => {
+    const host = req.get("host");
+    // Forzar HTTPS en Render/Producción para evitar problemas con ChatGPT
+    const protocol = host?.includes("localhost") ? "http" : "https";
+    const baseUrl = `${protocol}://${host}`;
+
+    const openApiSpec = {
+        openapi: "3.1.0",
+        info: {
+            title: "Color Accessibility Checker API",
+            description: "API para verificar contraste de colores y accesibilidad WCAG.",
+            version: "1.0.0",
+        },
+        servers: [
+            {
+                url: baseUrl,
+            },
+        ],
+        paths: {
+            "/api/analyze": {
+                post: {
+                    operationId: "analyzeContrast",
+                    summary: "Analizar contraste de dos colores",
+                    requestBody: {
+                        required: true,
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: {
+                                        foreground: { type: "string", description: "Color de texto (ej. #000000)" },
+                                        background: { type: "string", description: "Color de fondo (ej. #FFFFFF)" },
+                                    },
+                                    required: ["foreground", "background"],
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        "200": {
+                            description: "Resultado del análisis",
+                            content: { "application/json": { schema: { type: "object" } } },
+                        },
+                    },
+                },
+            },
+            "/api/analyze-html": {
+                post: {
+                    operationId: "analyzeHtml",
+                    summary: "Analizar fragmento HTML",
+                    requestBody: {
+                        required: true,
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: {
+                                        html: { type: "string", description: "Código HTML a analizar" },
+                                    },
+                                    required: ["html"],
+                                },
+                            },
+                        },
+                    },
+                    responses: {
+                        "200": {
+                            description: "Lista de problemas encontrados",
+                            content: { "application/json": { schema: { type: "object" } } },
+                        },
+                    },
+                },
+            },
+            "/api/wcag-info": {
+                get: {
+                    operationId: "getWcagInfo",
+                    summary: "Obtener información WCAG",
+                    responses: {
+                        "200": {
+                            description: "Información sobre niveles AA y AAA",
+                            content: { "application/json": { schema: { type: "object" } } },
+                        },
+                    },
+                },
+            },
+        },
+        components: {
+            schemas: {},
+        },
+    };
+
+    res.json(openApiSpec);
+});
+
+// 3. Endpoint MCP (Legacy/Desktop)
+app.post("/mcp", async (req: Request, res: Response) => {
+    try {
+        const transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: undefined,
+            enableJsonResponse: true,
+        });
+        res.on("close", () => transport.close());
+        await mcpServer.connect(transport);
+        await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+        console.error("Error en MCP:", error);
+        if (!res.headersSent) res.status(500).json({ error: "Internal server error" });
     }
 });
 
-// SSE endpoint for MCP
-app.get("/sse", async (req, res) => {
-    console.log("New SSE connection");
-
-    const transport = new SSEServerTransport("/message", res);
-    await server.connect(transport);
-
-    // Keep connection alive
-    req.on("close", () => {
-        console.log("SSE connection closed");
-    });
+app.get("/health", (_req, res) => {
+    res.json({ status: "ok", name: "color-accessibility-mcp-rest" });
 });
 
-// Message endpoint for MCP
-app.post("/message", async (req, res) => {
-    // This is handled by the SSE transport
-    res.status(200).send();
-});
-
-// Start server
+const PORT = parseInt(process.env.PORT || "3000", 10);
 app.listen(PORT, () => {
-    console.log(`Color Accessibility MCP Server running on port ${PORT}`);
-    console.log(`Health check: http://localhost:${PORT}/health`);
-    console.log(`SSE endpoint: http://localhost:${PORT}/sse`);
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`📝 OpenAPI Spec available at http://localhost:${PORT}/openapi.json`);
 });

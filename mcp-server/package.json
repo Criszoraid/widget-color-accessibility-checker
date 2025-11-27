@@ -19,14 +19,16 @@
     "author": "Criszoraid",
     "license": "MIT",
     "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.0.4",
-        "express": "^4.18.2",
-        "cors": "^2.8.5"
+        "@modelcontextprotocol/sdk": "^1.23.0",
+        "cors": "^2.8.5",
+        "express": "^4.21.2",
+        "zod": "^4.1.13"
     },
     "devDependencies": {
-        "@types/node": "^22.0.0",
-        "@types/express": "^4.17.21",
         "@types/cors": "^2.8.17",
-        "typescript": "^5.0.0"
+        "@types/express": "^4.17.25",
+        "@types/node": "^22.19.1",
+        "tsx": "^4.20.6",
+        "typescript": "^5.9.3"
     }
 }
