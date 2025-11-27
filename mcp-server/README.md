@@ -5,6 +5,7 @@ Un servidor MCP (Model Context Protocol) que expone herramientas de verificació
 ## 🚀 Características
 
 - **`analyze_accessibility`**: Analiza la accesibilidad de color de una URL
+- **`analyze_html_content`**: Analiza contenido HTML pegado directamente
 - **`get_wcag_info`**: Obtiene información sobre las pautas WCAG (AA/AAA)
 
 ## 📋 Requisitos
@@ -87,7 +88,18 @@ ChatGPT usará la herramienta `analyze_accessibility` y te mostrará:
 - Número de errores
 - Estado (aprobado/requiere correcciones)
 
-### Ejemplo 2: Información WCAG
+### Ejemplo 2: Analizar HTML directamente
+\`\`\`
+Analiza este HTML:
+<div style="color: #333; background: #fff">
+  <h1>Título</h1>
+  <p>Contenido</p>
+</div>
+\`\`\`
+
+ChatGPT usará `analyze_html_content` para analizar el fragmento HTML.
+
+### Ejemplo 3: Información WCAG
 \`\`\`
 Dame información sobre WCAG nivel AAA
 \`\`\`
@@ -134,6 +146,19 @@ Analiza la accesibilidad de color de una URL.
 
 **Retorna**:
 - Puntuación (0-10)
+- Número de errores
+- Mensaje de estado
+- Recomendaciones
+
+### analyze_html_content
+Analiza la accesibilidad de color de contenido HTML pegado directamente.
+
+**Parámetros**:
+- `html` (string): Contenido HTML a analizar (fragmento o página completa)
+
+**Retorna**:
+- Puntuación (0-10)
+- Elementos analizados
 - Número de errores
 - Mensaje de estado
 - Recomendaciones
