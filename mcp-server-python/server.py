@@ -8,7 +8,7 @@ import math
 import json
 from typing import Any, Dict, List
 
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # Enable CORS
 app.add_middleware(
