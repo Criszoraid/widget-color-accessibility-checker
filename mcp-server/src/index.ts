@@ -8,20 +8,70 @@ import cors from "cors";
 // URL de tu widget en Render
 const WIDGET_URL = "https://widget-color-accessibility-checker.onrender.com";
 
-// --- LÓGICA DE NEGOCIO (Simulada) ---
+// --- LÓGICA DE NEGOCIO (Real) ---
+
+/**
+ * Convierte un color hex a RGB
+ */
+function hexToRgb(hex: string) {
+    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, (_m, r, g, b) => r + r + g + g + b + b);
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+        ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16),
+        }
+        : null;
+}
+
+/**
+ * Calcula la luminancia relativa según WCAG 2.0
+ */
+function getLuminance(r: number, g: number, b: number) {
+    const a = [r, g, b].map((v) => {
+        v /= 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+}
+
+/**
+ * Calcula el ratio de contraste entre dos colores
+ */
+function getContrastRatio(fgHex: string, bgHex: string) {
+    const fg = hexToRgb(fgHex);
+    const bg = hexToRgb(bgHex);
+
+    if (!fg || !bg) return 0;
+
+    const lum1 = getLuminance(fg.r, fg.g, fg.b);
+    const lum2 = getLuminance(bg.r, bg.g, bg.b);
+
+    const brightest = Math.max(lum1, lum2);
+    const darkest = Math.min(lum1, lum2);
+
+    return (brightest + 0.05) / (darkest + 0.05);
+}
 
 function analyzeContrast(foreground: string, background: string) {
-    // Simulación
-    const ratioEjemplo = 4.5;
-    const passesAA = ratioEjemplo >= 4.5;
-    const passesAAA = ratioEjemplo >= 7;
+    const ratio = getContrastRatio(foreground, background);
+    const roundedRatio = Math.round(ratio * 100) / 100; // 2 decimales
+
+    const passesAA = roundedRatio >= 4.5;
+    const passesAAA = roundedRatio >= 7;
 
     return {
-        contrastRatio: ratioEjemplo,
+        contrastRatio: roundedRatio,
         passesAA,
         passesAAA,
-        message: `Contraste simulado para ${foreground} y ${background}: ${ratioEjemplo}:1`,
-        widgetUrl: WIDGET_URL,
+        message: `El contraste entre ${foreground} y ${background} es ${roundedRatio}:1. ${passesAA ? "✅ Pasa AA." : "❌ No pasa AA."
+            }`,
+        widgetUrl: `${WIDGET_URL}?fg=${foreground.replace("#", "")}&bg=${background.replace(
+            "#",
+            ""
+        )}`,
     };
 }
 
