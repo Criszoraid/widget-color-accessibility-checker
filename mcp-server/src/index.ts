@@ -119,9 +119,23 @@ mcpServer.registerTool(
     },
     async ({ foreground, background }) => {
         const output = analyzeContrast(foreground, background);
+
+        // Construir URL del widget con parámetros
+        const widgetUrlWithParams = `${WIDGET_URL}?fg=${foreground.replace("#", "")}&bg=${background.replace("#", "")}`;
+
         return {
             structuredContent: output,
-            content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
+            content: [
+                { type: "text", text: JSON.stringify(output, null, 2) },
+                {
+                    type: "resource",
+                    resource: {
+                        uri: "widget://color-accessibility",
+                        mimeType: "text/html+skybridge",
+                        text: `<iframe src="${widgetUrlWithParams}" width="100%" height="600px" frameborder="0"></iframe>`,
+                    },
+                },
+            ],
         };
     }
 );
