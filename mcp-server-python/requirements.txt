@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+duckduckgo-search
+httpx
+beautifulsoup4
+lxml
