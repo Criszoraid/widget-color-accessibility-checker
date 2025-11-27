@@ -78,6 +78,20 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Root endpoint
+app.get("/", (req, res) => {
+    res.json({
+        name: "Color Accessibility MCP Server",
+        version: "1.0.0",
+        endpoints: {
+            health: "/health",
+            sse: "/sse",
+            message: "/message"
+        },
+        tools: ["analyze_accessibility", "analyze_html_content", "get_wcag_info"]
+    });
+});
+
 // Health check endpoint
 app.get("/health", (req, res) => {
     res.json({ status: "ok", service: "color-accessibility-mcp-server" });
