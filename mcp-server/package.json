@@ -6,7 +6,9 @@
     "main": "dist/index.js",
     "scripts": {
         "build": "tsc",
+        "build:local": "tsc src/index-local.ts --outDir dist-local --module Node16 --moduleResolution Node16 --target ES2022 --esModuleInterop --skipLibCheck",
         "start": "node dist/index.js",
+        "start:local": "node dist-local/index-local.js",
         "dev": "tsc && node dist/index.js"
     },
     "keywords": [
