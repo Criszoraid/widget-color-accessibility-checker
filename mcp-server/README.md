@@ -1,19 +1,21 @@
-# Color Accessibility Checker - MCP Server
+# Color Accessibility Checker - MCP Server (HTTP)
 
-Un servidor MCP (Model Context Protocol) que expone herramientas de verificación de accesibilidad de color para usar en ChatGPT Desktop.
+Un servidor MCP (Model Context Protocol) HTTP que expone herramientas de verificación de accesibilidad de color para usar en ChatGPT Desktop de forma remota.
 
 ## 🚀 Características
 
 - **`analyze_accessibility`**: Analiza la accesibilidad de color de una URL
 - **`analyze_html_content`**: Analiza contenido HTML pegado directamente
 - **`get_wcag_info`**: Obtiene información sobre las pautas WCAG (AA/AAA)
+- **HTTP + SSE**: Servidor remoto accesible vía URL
 
 ## 📋 Requisitos
 
 - Node.js 18+
 - ChatGPT Desktop App (macOS/Windows)
+- Cuenta en Render (para deployment)
 
-## 🛠️ Instalación
+## 🛠️ Instalación Local
 
 1. **Instalar dependencias**:
 \`\`\`bash
@@ -26,13 +28,51 @@ npm install
 npm run build
 \`\`\`
 
+3. **Ejecutar localmente**:
+\`\`\`bash
+npm start
+\`\`\`
+
+El servidor estará disponible en `http://localhost:3000`
+
+## 🌐 Desplegar en Render
+
+### Opción 1: Deploy desde GitHub (Recomendado)
+
+1. Ve a [Render Dashboard](https://dashboard.render.com/)
+2. Click en **"New +"** → **"Web Service"**
+3. Conecta tu repositorio de GitHub
+4. Configura:
+   - **Name**: `color-accessibility-mcp`
+   - **Root Directory**: `mcp-server`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+   - **Environment**: Node
+5. Click **"Create Web Service"**
+
+Tu servidor estará disponible en: `https://color-accessibility-mcp.onrender.com`
+
+### Opción 2: Deploy Manual
+
+\`\`\`bash
+# Desde el directorio mcp-server
+git push render main
+\`\`\`
+
 ## ⚙️ Configuración en ChatGPT Desktop
 
-### macOS
+### Configuración con URL Remota
 
 1. Abre el archivo de configuración:
+
+**macOS**:
 \`\`\`bash
 code ~/Library/Application\\ Support/Claude/claude_desktop_config.json
+\`\`\`
+
+**Windows**:
+\`\`\`
+%APPDATA%\\Claude\\claude_desktop_config.json
 \`\`\`
 
 2. Añade la configuración del servidor MCP:
@@ -40,37 +80,13 @@ code ~/Library/Application\\ Support/Claude/claude_desktop_config.json
 {
   "mcpServers": {
     "color-accessibility-checker": {
-      "command": "node",
-      "args": [
-        "/Users/TU_USUARIO/Desktop/ColorAccessibilityChecker/mcp-server/dist/index.js"
-      ]
+      "url": "https://TU-APP.onrender.com/sse"
     }
   }
 }
 \`\`\`
 
-> **Importante**: Reemplaza `/Users/TU_USUARIO/` con tu ruta real.
-
-### Windows
-
-1. Abre el archivo de configuración:
-\`\`\`
-%APPDATA%\\Claude\\claude_desktop_config.json
-\`\`\`
-
-2. Añade la configuración (usa rutas de Windows):
-\`\`\`json
-{
-  "mcpServers": {
-    "color-accessibility-checker": {
-      "command": "node",
-      "args": [
-        "C:\\\\Users\\\\TU_USUARIO\\\\Desktop\\\\ColorAccessibilityChecker\\\\mcp-server\\\\dist\\\\index.js"
-      ]
-    }
-  }
-}
-\`\`\`
+> **Importante**: Reemplaza `TU-APP.onrender.com` con tu URL real de Render.
 
 3. **Reinicia ChatGPT Desktop**
 
@@ -83,11 +99,6 @@ Una vez configurado, puedes usar las herramientas desde ChatGPT:
 Analiza la accesibilidad de https://google.com
 \`\`\`
 
-ChatGPT usará la herramienta `analyze_accessibility` y te mostrará:
-- Puntuación de accesibilidad
-- Número de errores
-- Estado (aprobado/requiere correcciones)
-
 ### Ejemplo 2: Analizar HTML directamente
 \`\`\`
 Analiza este HTML:
@@ -97,14 +108,10 @@ Analiza este HTML:
 </div>
 \`\`\`
 
-ChatGPT usará `analyze_html_content` para analizar el fragmento HTML.
-
 ### Ejemplo 3: Información WCAG
 \`\`\`
 Dame información sobre WCAG nivel AAA
 \`\`\`
-
-ChatGPT usará `get_wcag_info` para mostrar los requisitos de contraste.
 
 ## 🔧 Desarrollo
 
@@ -118,22 +125,37 @@ npm run dev
 npm run build
 \`\`\`
 
+### Endpoints HTTP
+
+- **Health Check**: `GET /health`
+- **SSE Connection**: `GET /sse`
+- **Message Endpoint**: `POST /message`
+
 ### Estructura del proyecto
 \`\`\`
 mcp-server/
 ├── src/
-│   └── index.ts       # Implementación del servidor MCP
+│   └── index.ts       # Servidor HTTP con SSE
 ├── dist/              # Código compilado
+├── Procfile           # Configuración Render
 ├── package.json
 └── tsconfig.json
 \`\`\`
 
 ## 🧪 Testing
 
-Para probar el servidor sin ChatGPT, puedes usar el MCP Inspector:
-
+### Test local
 \`\`\`bash
-npx @modelcontextprotocol/inspector node dist/index.js
+# Iniciar servidor
+npm start
+
+# En otra terminal, verificar health check
+curl http://localhost:3000/health
+\`\`\`
+
+### Test remoto
+\`\`\`bash
+curl https://TU-APP.onrender.com/health
 \`\`\`
 
 ## 📝 Herramientas Disponibles
@@ -142,7 +164,7 @@ npx @modelcontextprotocol/inspector node dist/index.js
 Analiza la accesibilidad de color de una URL.
 
 **Parámetros**:
-- \`url\` (string): URL del sitio web a analizar
+- `url` (string): URL del sitio web a analizar
 
 **Retorna**:
 - Puntuación (0-10)
@@ -167,7 +189,7 @@ Analiza la accesibilidad de color de contenido HTML pegado directamente.
 Obtiene información sobre las pautas WCAG.
 
 **Parámetros**:
-- \`level\` (string): "AA" o "AAA"
+- `level` (string): "AA" o "AAA"
 
 **Retorna**:
 - Requisitos de contraste
@@ -176,14 +198,19 @@ Obtiene información sobre las pautas WCAG.
 ## 🐛 Troubleshooting
 
 ### El servidor no aparece en ChatGPT
-1. Verifica que la ruta en \`claude_desktop_config.json\` sea correcta
-2. Asegúrate de haber compilado el código (\`npm run build\`)
-3. Reinicia ChatGPT Desktop completamente
+1. Verifica que la URL en `claude_desktop_config.json` sea correcta
+2. Asegúrate de que el servidor esté desplegado y funcionando
+3. Verifica el health check: `curl https://TU-APP.onrender.com/health`
+4. Reinicia ChatGPT Desktop completamente
 
-### Error al ejecutar
-1. Verifica que Node.js esté instalado: \`node --version\`
-2. Reinstala dependencias: \`npm install\`
-3. Recompila: \`npm run build\`
+### Error al conectar
+1. Verifica que Render no haya pausado el servicio (free tier)
+2. Revisa los logs en Render Dashboard
+3. Asegúrate de que el endpoint SSE sea `/sse`
+
+### Render Free Tier
+- Los servicios gratuitos se pausan después de 15 minutos de inactividad
+- La primera petición después de la pausa puede tardar 30-60 segundos
 
 ## 📄 Licencia
 
@@ -192,3 +219,8 @@ MIT
 ## 👤 Autor
 
 [Criszoraid](https://github.com/Criszoraid)
+
+## 🔗 Enlaces
+
+- **Repositorio**: [https://github.com/Criszoraid/color-accessibility-checker](https://github.com/Criszoraid/color-accessibility-checker)
+- **Web App**: [Deploy en Render](https://github.com/Criszoraid/color-accessibility-checker#readme)

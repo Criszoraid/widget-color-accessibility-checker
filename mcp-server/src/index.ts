@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import {
     CallToolRequestSchema,
     ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import express from "express";
+import cors from "cors";
 
 // Simulated accessibility analysis function
 function analyzeAccessibility(url: string): {
@@ -68,7 +70,20 @@ function getWCAGInfo(level: "AA" | "AAA"): string {
     return info[level];
 }
 
-// Create server instance
+// Create Express app
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Enable CORS
+app.use(cors());
+app.use(express.json());
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+    res.json({ status: "ok", service: "color-accessibility-mcp-server" });
+});
+
+// Create MCP server instance
 const server = new Server(
     {
         name: "color-accessibility-checker",
@@ -262,14 +277,28 @@ ${result.passed ? "" : "Recomendación: Revisa los elementos con bajo contraste 
     }
 });
 
-// Start server
-async function main() {
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error("Color Accessibility MCP Server running on stdio");
-}
+// SSE endpoint for MCP
+app.get("/sse", async (req, res) => {
+    console.log("New SSE connection");
 
-main().catch((error) => {
-    console.error("Server error:", error);
-    process.exit(1);
+    const transport = new SSEServerTransport("/message", res);
+    await server.connect(transport);
+
+    // Keep connection alive
+    req.on("close", () => {
+        console.log("SSE connection closed");
+    });
+});
+
+// Message endpoint for MCP
+app.post("/message", async (req, res) => {
+    // This is handled by the SSE transport
+    res.status(200).send();
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Color Accessibility MCP Server running on port ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+    console.log(`SSE endpoint: http://localhost:${PORT}/sse`);
 });
